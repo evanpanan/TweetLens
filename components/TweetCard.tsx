@@ -84,27 +84,48 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
     },
   ];
 
-  // 渲染推文内容中的链接
+  // 渲染推文内容中的链接（点击内部链接时阻止冒泡，避免触发外层跳转原推）
   const renderContent = (text: string) => {
     const parts = text.split(/(https?:\/\/\S+|@\w+|#\w+)/g);
     return parts.map((part, i) => {
       if (part.match(/^https?:\/\//)) {
         return (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer">
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-sky-400 hover:underline"
+          >
             {part}
           </a>
         );
       }
       if (part.match(/^@\w+/)) {
         return (
-          <a key={i} href={`https://x.com/${part.slice(1)}`} target="_blank" rel="noopener noreferrer">
+          <a
+            key={i}
+            href={`https://x.com/${part.slice(1)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-sky-400 hover:underline"
+          >
             {part}
           </a>
         );
       }
       if (part.match(/^#\w+/)) {
         return (
-          <a key={i} href={`https://x.com/hashtag/${part.slice(1)}`} target="_blank" rel="noopener noreferrer">
+          <a
+            key={i}
+            href={`https://x.com/hashtag/${part.slice(1)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-sky-400 hover:underline"
+          >
             {part}
           </a>
         );
@@ -128,11 +149,18 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
 
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
+          <a
+          href={`https://x.com/${tweet.author_handle}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0"
+          title="查看推特主页"
+        >
           {tweet.author_avatar ? (
             <img
               src={tweet.author_avatar}
               alt={tweet.author_name}
-              className="h-10 w-10 shrink-0 rounded-full ring-1 ring-zinc-700"
+              className="h-10 w-10 shrink-0 rounded-full ring-1 ring-zinc-700 transition hover:ring-sky-500"
               loading="lazy"
             />
           ) : (
@@ -140,9 +168,18 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
               {tweet.author_name[0]?.toUpperCase()}
             </div>
           )}
+          </a>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="truncate font-bold text-white">{tweet.author_name}</span>
+              <a
+                href={`https://x.com/${tweet.author_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate font-bold text-white transition hover:underline"
+                title="查看推特主页"
+              >
+                {tweet.author_name}
+              </a>
               {tweet.author_verified && <VerifiedBadge />}
               <span
                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${sentiment.color}`}
@@ -213,10 +250,16 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
         </div>
       </div>
 
-      {/* 推文内容 */}
-      <div className="tweet-content mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-zinc-100">
+      {/* 推文内容（点击跳转到原推） */}
+      <a
+        href={tweet.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tweet-content mt-3 block whitespace-pre-wrap break-words text-[15px] leading-relaxed text-zinc-100 transition hover:text-zinc-50"
+        title="在 X 上查看原推"
+      >
         {renderContent(tweet.content)}
-      </div>
+      </a>
 
       {/* 翻译内容 */}
       {hasTranslation && showTranslation && (
@@ -293,10 +336,15 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
             </svg>
             引用推文
           </div>
-          <div className="mt-1 font-semibold text-zinc-200">
+          <a
+            href={`https://x.com/${tweet.quoted_tweet.author_handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 font-semibold text-zinc-200 hover:underline"
+          >
             {tweet.quoted_tweet.author_name}{" "}
             <span className="font-normal text-zinc-500">@{tweet.quoted_tweet.author_handle}</span>
-          </div>
+          </a>
           <div className="tweet-content mt-1 text-sm text-zinc-300">{renderContent(tweet.quoted_tweet.content)}</div>
         </div>
       )}
@@ -309,10 +357,15 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
           rel="noopener noreferrer"
           onMouseEnter={() => setShowFullDate(true)}
           onMouseLeave={() => setShowFullDate(false)}
-          className="text-xs text-zinc-500 hover:text-zinc-400"
-          title={formatFullDate(tweet.posted_at)}
+          className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
+          title={`在 X 上查看原推 · ${formatFullDate(tweet.posted_at)}`}
         >
           {showFullDate ? formatFullDate(tweet.posted_at) : formatRelativeTime(tweet.posted_at)}
+          <svg className="h-3 w-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
         </a>
         <span className="text-zinc-700">·</span>
         {tweet.views !== null && (
