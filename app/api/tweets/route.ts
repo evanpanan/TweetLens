@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { scrapeTweet, extractTweetId } from "@/lib/scraper";
 import { analyzeTweet } from "@/lib/analyzer";
 import { z } from "zod";
@@ -24,19 +24,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
+    const sql = await getDb();
 
     // 检查事件是否存在
-    const event = db.prepare("SELECT id FROM events WHERE id = ?").get(parsed.event_id);
-    if (!event) {
+    const { rows: eventRows } = await sql`SELECT id FROM events WHERE id = ${parsed.event_id}`;
+    if (eventRows.length === 0) {
       return NextResponse.json({ error: "事件不存在" }, { status: 404 });
     }
 
     // 检查是否已提交过
-    const existing = db
-      .prepare("SELECT id FROM tweets WHERE tweet_id = ? AND event_id = ?")
-      .get(tweetId, parsed.event_id);
-    if (existing) {
+    const { rows: existingRows } = await sql`
+      SELECT id FROM tweets WHERE tweet_id = ${tweetId} AND event_id = ${parsed.event_id}
+    `;
+    if (existingRows.length > 0) {
       return NextResponse.json(
         { error: "该推文已在此事件中" },
         { status: 409 }
@@ -50,41 +50,27 @@ export async function POST(request: Request) {
     const analysis = analyzeTweet(data.content);
 
     // 存储到数据库
-    const result = db
-      .prepare(
-        `INSERT INTO tweets
-          (event_id, tweet_id, url, author_name, author_handle, author_avatar,
-           author_verified, content, posted_at, likes, retweets, replies,
-           quotes, bookmarks, views, media, quoted_tweet, is_reply,
-           tags, sentiment, sentiment_reason, submitted_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        parsed.event_id,
-        data.tweet_id,
-        data.url,
-        data.author_name,
-        data.author_handle,
-        data.author_avatar,
-        data.author_verified ? 1 : 0,
-        data.content,
-        data.posted_at,
-        data.likes,
-        data.retweets,
-        data.replies,
-        data.quotes,
-        data.bookmarks,
-        data.views,
-        JSON.stringify(data.media),
-        data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null,
-        data.is_reply ? 1 : 0,
-        JSON.stringify(analysis.tags),
-        analysis.sentiment,
-        analysis.sentiment_reason,
-        parsed.submitted_by || null
-      );
+    const { rows } = await sql`
+      INSERT INTO tweets
+        (event_id, tweet_id, url, author_name, author_handle, author_avatar,
+         author_verified, content, posted_at, likes, retweets, replies,
+         quotes, bookmarks, views, media, quoted_tweet, is_reply,
+         tags, sentiment, sentiment_reason, submitted_by)
+      VALUES
+        (${parsed.event_id}, ${data.tweet_id}, ${data.url}, ${data.author_name},
+         ${data.author_handle}, ${data.author_avatar},
+         ${data.author_verified ? 1 : 0}, ${data.content}, ${data.posted_at},
+         ${data.likes}, ${data.retweets}, ${data.replies},
+         ${data.quotes}, ${data.bookmarks}, ${data.views},
+         ${JSON.stringify(data.media)},
+         ${data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null},
+         ${data.is_reply ? 1 : 0},
+         ${JSON.stringify(analysis.tags)}, ${analysis.sentiment},
+         ${analysis.sentiment_reason}, ${parsed.submitted_by || null})
+      RETURNING *
+    `;
 
-    const tweet = db.prepare("SELECT * FROM tweets WHERE id = ?").get(result.lastInsertRowid) as any;
+    const tweet: any = rows[0];
 
     return NextResponse.json(
       {
@@ -100,11 +86,18 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0]?.message || "参数错误" },
         { status: 400 }
+      );
+    }
+    // PostgreSQL 唯一约束冲突
+    if (error?.code === "23505") {
+      return NextResponse.json(
+        { error: "该推文已在此事件中" },
+        { status: 409 }
       );
     }
     const message = error instanceof Error ? error.message : "提交失败";

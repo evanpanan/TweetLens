@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { scrapeTweet } from "@/lib/scraper";
 import { analyzeTweet } from "@/lib/analyzer";
 
@@ -9,9 +9,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
+  const sql = await getDb();
 
-  const tweet = db.prepare("SELECT * FROM tweets WHERE id = ?").get(id) as any;
+  const { rows: tweetRows } = await sql`SELECT * FROM tweets WHERE id = ${id}`;
+  const tweet: any = tweetRows[0];
   if (!tweet) {
     return NextResponse.json({ error: "推文不存在" }, { status: 404 });
   }
@@ -20,29 +21,22 @@ export async function POST(
     const data = await scrapeTweet(tweet.url);
     const analysis = analyzeTweet(data.content);
 
-    db.prepare(
-      `UPDATE tweets SET
-        likes = ?, retweets = ?, replies = ?, quotes = ?, bookmarks = ?,
-        views = ?, media = ?, quoted_tweet = ?,
-        tags = ?, sentiment = ?, sentiment_reason = ?,
-        fetched_at = datetime('now')
-       WHERE id = ?`
-    ).run(
-      data.likes,
-      data.retweets,
-      data.replies,
-      data.quotes,
-      data.bookmarks,
-      data.views,
-      JSON.stringify(data.media),
-      data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null,
-      JSON.stringify(analysis.tags),
-      analysis.sentiment,
-      analysis.sentiment_reason,
-      id
-    );
+    await sql`
+      UPDATE tweets SET
+        likes = ${data.likes}, retweets = ${data.retweets},
+        replies = ${data.replies}, quotes = ${data.quotes},
+        bookmarks = ${data.bookmarks}, views = ${data.views},
+        media = ${JSON.stringify(data.media)},
+        quoted_tweet = ${data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null},
+        tags = ${JSON.stringify(analysis.tags)},
+        sentiment = ${analysis.sentiment},
+        sentiment_reason = ${analysis.sentiment_reason},
+        fetched_at = NOW()
+      WHERE id = ${id}
+    `;
 
-    const updated = db.prepare("SELECT * FROM tweets WHERE id = ?").get(id) as any;
+    const { rows: updatedRows } = await sql`SELECT * FROM tweets WHERE id = ${id}`;
+    const updated: any = updatedRows[0];
 
     return NextResponse.json({
       tweet: {
@@ -67,10 +61,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const db = getDb();
+  const sql = await getDb();
 
-  const result = db.prepare("DELETE FROM tweets WHERE id = ?").run(id);
-  if (result.changes === 0) {
+  const result = await sql`DELETE FROM tweets WHERE id = ${id}`;
+  if (result.rowCount === 0) {
     return NextResponse.json({ error: "推文不存在" }, { status: 404 });
   }
 

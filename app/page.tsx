@@ -1,20 +1,48 @@
 import Link from "next/link";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 import EventCard from "@/components/EventCard";
+import type { Event } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const db = getDb();
-  const events = db
-    .prepare(
-      `SELECT e.*, COUNT(t.id) as tweet_count
-       FROM events e
-       LEFT JOIN tweets t ON t.event_id = e.id
-       GROUP BY e.id
-       ORDER BY e.created_at DESC`
-    )
-    .all() as any[];
+export default async function HomePage() {
+  let events: Event[] = [];
+  let dbError = "";
+
+  try {
+    const sql = await getDb();
+    const { rows } = await sql`
+      SELECT e.*, COUNT(t.id)::int as tweet_count
+      FROM events e
+      LEFT JOIN tweets t ON t.event_id = e.id
+      GROUP BY e.id
+      ORDER BY e.created_at DESC
+    `;
+    events = rows as Event[];
+  } catch (err) {
+    dbError =
+      err instanceof Error ? err.message : "数据库连接失败";
+  }
+
+  if (dbError) {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/20">
+          <svg className="h-6 w-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-bold text-amber-300">数据库未配置</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-amber-200/80">
+          请在 Vercel 项目中创建 Postgres 数据库并连接到本项目。
+          进入 Vercel Dashboard → 你的项目 → Storage → Create Database → Postgres，
+          创建后自动注入 <code className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs">POSTGRES_URL</code> 环境变量，然后重新部署即可。
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

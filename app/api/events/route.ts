@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { z } from "zod";
 
 // 获取所有事件（含推文数量）
 export async function GET() {
-  const db = getDb();
-  const events = db
-    .prepare(
-      `SELECT e.*, COUNT(t.id) as tweet_count
-       FROM events e
-       LEFT JOIN tweets t ON t.event_id = e.id
-       GROUP BY e.id
-       ORDER BY e.created_at DESC`
-    )
-    .all();
+  const sql = await getDb();
+  const { rows: events } = await sql`
+    SELECT e.*, COUNT(t.id)::int as tweet_count
+    FROM events e
+    LEFT JOIN tweets t ON t.event_id = e.id
+    GROUP BY e.id
+    ORDER BY e.created_at DESC
+  `;
 
   return NextResponse.json({ events });
 }
@@ -30,18 +28,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = createSchema.parse(body);
 
-    const db = getDb();
-    const result = db
-      .prepare(
-        "INSERT INTO events (title, description, cover_url) VALUES (?, ?, ?)"
-      )
-      .run(parsed.title, parsed.description, parsed.cover_url || null);
+    const sql = await getDb();
+    const { rows } = await sql`
+      INSERT INTO events (title, description, cover_url)
+      VALUES (${parsed.title}, ${parsed.description}, ${parsed.cover_url || null})
+      RETURNING *
+    `;
 
-    const event = db
-      .prepare("SELECT * FROM events WHERE id = ?")
-      .get(result.lastInsertRowid);
-
-    return NextResponse.json({ event }, { status: 201 });
+    return NextResponse.json({ event: rows[0] }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
