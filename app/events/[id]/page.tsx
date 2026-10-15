@@ -55,6 +55,17 @@ export default function EventDetailPage() {
       return;
     }
 
+    // 解析多条链接（支持换行、逗号、空格分隔）
+    const urls = submitUrl
+      .split(/[\n,;\s]+/)
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0);
+
+    if (urls.length === 0) {
+      setSubmitError("请输入推文链接");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError("");
     setSubmitSuccess("");
@@ -63,7 +74,10 @@ export default function EventDetailPage() {
       const res = await fetch("/api/tweets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id: Number(id), url: submitUrl.trim() }),
+        body: JSON.stringify({
+          event_id: Number(id),
+          urls,
+        }),
       });
       const data = await res.json();
 
@@ -71,10 +85,30 @@ export default function EventDetailPage() {
         throw new Error(data.error || "提交失败");
       }
 
-      setSubmitSuccess("推文已添加到时间线！");
+      // 多条提交的返回格式
+      if (data.results) {
+        const success = data.success_count || 0;
+        const fail = data.fail_count || 0;
+        if (fail > 0) {
+          const failDetails = data.results
+            .filter((r: any) => !r.success)
+            .map((r: any) => r.error)
+            .join("；");
+          setSubmitError(`成功 ${success} 条，失败 ${fail} 条：${failDetails}`);
+        } else {
+          setSubmitSuccess(`成功添加 ${success} 条推文到时间线！`);
+        }
+      } else {
+        // 单条提交（向后兼容）
+        setSubmitSuccess("推文已添加到时间线！");
+      }
+
       setSubmitUrl("");
       await fetchEvent();
-      setTimeout(() => setSubmitSuccess(""), 3000);
+      setTimeout(() => {
+        setSubmitSuccess("");
+        setSubmitError("");
+      }, 5000);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "提交失败");
     } finally {
@@ -262,24 +296,24 @@ export default function EventDetailPage() {
           <h2 className="font-bold">提交推文</h2>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="flex gap-2">
-            <input
-              type="text"
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <textarea
               value={submitUrl}
               onChange={(e) => setSubmitUrl(e.target.value)}
-              placeholder="粘贴推文链接，如 https://x.com/user/status/123"
-              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              placeholder="粘贴推文链接，支持多条（每行一条，如：&#10;https://x.com/user/status/123&#10;https://x.com/user/status/456"
+              rows={3}
+              className="flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
             />
             <button
               type="submit"
               disabled={submitting}
-              className="shrink-0 rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:opacity-50"
+              className="shrink-0 self-start rounded-xl bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:opacity-50"
             >
               {submitting ? "抓取中..." : "添加"}
             </button>
           </div>
           <p className="mt-2 text-xs text-zinc-600">
-            支持 twitter.com / x.com 的推文链接。系统会自动抓取推文内容及互动数据
+            支持 twitter.com / x.com 的推文链接。可一次性粘贴多条链接，用换行或逗号分隔
           </p>
           {submitError && (
             <div className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">

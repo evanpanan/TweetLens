@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { scrapeTweet } from "@/lib/scraper";
 import { analyzeTweet } from "@/lib/analyzer";
+import { translateToChinese } from "@/lib/translator";
 
 // 刷新单条推文的互动数据
 export async function POST(
@@ -21,6 +22,12 @@ export async function POST(
     const data = await scrapeTweet(tweet.url);
     const analysis = analyzeTweet(data.content);
 
+    // 如果没有翻译过，或者内容变了，重新翻译
+    let contentZh = tweet.content_zh || "";
+    if (!contentZh || tweet.content !== data.content) {
+      contentZh = await translateToChinese(data.content);
+    }
+
     await sql`
       UPDATE tweets SET
         likes = ${data.likes}, retweets = ${data.retweets},
@@ -31,6 +38,8 @@ export async function POST(
         tags = ${JSON.stringify(analysis.tags)},
         sentiment = ${analysis.sentiment},
         sentiment_reason = ${analysis.sentiment_reason},
+        content = ${data.content},
+        content_zh = ${contentZh},
         fetched_at = NOW()
       WHERE id = ${id}
     `;

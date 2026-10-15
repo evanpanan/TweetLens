@@ -46,6 +46,7 @@ const initSchemaPromise = (async () => {
         author_avatar TEXT,
         author_verified INTEGER NOT NULL DEFAULT 0,
         content TEXT NOT NULL,
+        content_zh TEXT NOT NULL DEFAULT '',
         posted_at TEXT NOT NULL,
         likes INTEGER NOT NULL DEFAULT 0,
         retweets INTEGER NOT NULL DEFAULT 0,
@@ -68,6 +69,13 @@ const initSchemaPromise = (async () => {
 
     await sql`CREATE INDEX IF NOT EXISTS idx_tweets_event_id ON tweets(event_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_tweets_posted_at ON tweets(posted_at)`;
+
+    // 迁移：为已存在的表添加 content_zh 列（翻译内容）
+    try {
+      await sql`ALTER TABLE tweets ADD COLUMN IF NOT EXISTS content_zh TEXT NOT NULL DEFAULT ''`;
+    } catch {
+      // 忽略已存在列的错误
+    }
   } catch (err) {
     console.error("[db] Schema 初始化失败:", err);
     throw err;

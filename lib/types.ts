@@ -19,6 +19,7 @@ export interface Tweet {
   author_avatar: string | null;
   author_verified: boolean;
   content: string;
+  content_zh: string;
   posted_at: string;
   likes: number;
   retweets: number;

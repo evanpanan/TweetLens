@@ -22,6 +22,9 @@ function VerifiedBadge() {
 export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = true }: TweetCardProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [showFullDate, setShowFullDate] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+
+  const hasTranslation = !!tweet.content_zh && tweet.content_zh.trim() !== "" && tweet.content_zh !== tweet.content;
 
   const handleRefresh = async () => {
     if (!onRefresh || refreshing) return;
@@ -197,6 +200,31 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
       <div className="tweet-content mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-zinc-100">
         {renderContent(tweet.content)}
       </div>
+
+      {/* 翻译内容 */}
+      {hasTranslation && showTranslation && (
+        <div className="tweet-content mt-2 whitespace-pre-wrap break-words border-l-2 border-sky-500/40 bg-sky-500/5 pl-3 text-[15px] leading-relaxed text-sky-100/90">
+          {renderContent(tweet.content_zh)}
+        </div>
+      )}
+
+      {/* 翻译切换按钮 */}
+      {hasTranslation && (
+        <button
+          onClick={() => setShowTranslation(!showTranslation)}
+          className="mt-2 inline-flex items-center gap-1 rounded-full bg-zinc-800/60 px-2.5 py-1 text-[11px] font-medium text-zinc-400 transition hover:bg-zinc-700/60 hover:text-sky-400"
+        >
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m5 8 6 6" />
+            <path d="m4 14 6-6 2-3" />
+            <path d="M2 5h12" />
+            <path d="M7 2h1" />
+            <path d="m22 22-5-10-5 10" />
+            <path d="M14 18h6" />
+          </svg>
+          {showTranslation ? "隐藏翻译" : "查看翻译"}
+        </button>
+      )}
 
       {/* 标签 */}
       {tweet.tags && tweet.tags.length > 0 && (
