@@ -59,8 +59,6 @@ const initSchemaPromise = withRetry(async () => {
         title TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
         cover_url TEXT,
-        keywords TEXT NOT NULL DEFAULT '',
-        auto_refresh BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
@@ -107,14 +105,6 @@ const initSchemaPromise = withRetry(async () => {
     } catch {
       // 忽略已存在列的错误
     }
-
-    // 迁移：为 events 表添加 keywords 和 auto_refresh 列
-    try {
-      await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS keywords TEXT NOT NULL DEFAULT ''`;
-    } catch {}
-    try {
-      await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_refresh BOOLEAN NOT NULL DEFAULT false`;
-    } catch {}
 
     // 迁移：为 tweets 表添加 source 列（区分用户提交和自动抓取）
     try {

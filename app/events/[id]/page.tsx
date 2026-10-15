@@ -11,8 +11,6 @@ interface EventDetail {
   title: string;
   description: string;
   cover_url: string | null;
-  keywords: string;
-  auto_refresh: boolean;
   created_at: string;
   tweet_count: number;
 }
@@ -29,10 +27,7 @@ export default function EventDetailPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [refreshingAll, setRefreshingAll] = useState(false);
-  const [togglingAutoRefresh, setTogglingAutoRefresh] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "bearish" | "neutral">("all");
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState("");
   const [error, setError] = useState("");
 
   const fetchEvent = useCallback(async () => {
@@ -52,58 +47,6 @@ export default function EventDetailPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
-
-  // 搜索新推文（供轮询和手动触发）
-  const doSearch = useCallback(async () => {
-    if (searching) return;
-    setSearching(true);
-    setSearchError("");
-    try {
-      const res = await fetch(`/api/events/${eventId}/search`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "搜索失败");
-      }
-      // 搜索到了新推文才刷新
-      if (data.new_tweets > 0 || data.skipped < data.searched) {
-        await fetchEvent();
-      }
-    } catch (e: any) {
-      setSearchError(e?.message || "搜索失败，请稍后重试");
-    } finally {
-      setSearching(false);
-    }
-  }, [eventId, fetchEvent, searching]);
-
-  // 客户端自动轮询：如果开启了自动更新，立即搜索一次，然后每 2.5 分钟搜索
-  useEffect(() => {
-    if (!event?.auto_refresh) return;
-
-    // 立即执行一次（不等 2.5 分钟）
-    doSearch();
-
-    const interval = setInterval(doSearch, 2.5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [event?.auto_refresh, doSearch]);
-
-  // 切换自动更新开关
-  const handleToggleAutoRefresh = async () => {
-    if (!event || togglingAutoRefresh) return;
-    setTogglingAutoRefresh(true);
-    try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auto_refresh: !event.auto_refresh }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEvent(data.event);
-      }
-    } finally {
-      setTogglingAutoRefresh(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -272,12 +215,6 @@ export default function EventDetailPage() {
         </div>
       )}
 
-      {searchError && (
-        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
-          搜索失败：{searchError}
-        </div>
-      )}
-
       {event.cover_url && (
         <div className="mb-4 overflow-hidden rounded-2xl border border-zinc-800">
           <img src={event.cover_url} alt={event.title} className="h-40 w-full object-cover sm:h-48" />
@@ -288,40 +225,8 @@ export default function EventDetailPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-black">{event.title}</h1>
-            {event.keywords && (
-              <div className="mt-1 text-xs text-zinc-500">
-                搜索关键词：<span className="text-zinc-400">{event.keywords}</span>
-              </div>
-            )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {/* 自动更新开关 */}
-            <button
-              onClick={handleToggleAutoRefresh}
-              disabled={togglingAutoRefresh}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition ${
-                event.auto_refresh
-                  ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/30"
-                  : "bg-zinc-800 text-zinc-400 ring-1 ring-inset ring-zinc-700"
-              } disabled:opacity-50`}
-              title={event.auto_refresh ? "已开启自动更新，点击关闭" : "点击开启自动更新"}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${event.auto_refresh ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`} />
-              {event.auto_refresh ? "自动更新中" : "自动更新"}
-            </button>
-            {/* 手动搜索按钮 */}
-            <button
-              onClick={doSearch}
-              disabled={searching}
-              className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-zinc-700 transition hover:bg-zinc-700 disabled:opacity-50"
-              title="根据关键词立即搜索新推文"
-            >
-              <svg className={`h-3.5 w-3.5 ${searching ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              {searching ? "搜索中..." : "立即搜索"}
-            </button>
             <button
               onClick={handleDeleteEvent}
               className="rounded-full p-2 text-zinc-500 transition hover:bg-red-900/30 hover:text-red-400"

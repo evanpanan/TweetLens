@@ -4,8 +4,6 @@ export interface Event {
   title: string;
   description: string;
   cover_url: string | null;
-  keywords: string;
-  auto_refresh: boolean;
   created_at: string;
   tweet_count: number;
 }
@@ -61,8 +59,6 @@ export interface CreateEventInput {
   title: string;
   description: string;
   cover_url?: string;
-  keywords?: string;
-  auto_refresh?: boolean;
 }
 
 // 提交推文的请求

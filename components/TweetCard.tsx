@@ -250,16 +250,10 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
         </div>
       </div>
 
-      {/* 推文内容（点击跳转到原推） */}
-      <a
-        href={tweet.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="tweet-content mt-3 block whitespace-pre-wrap break-words text-[15px] leading-relaxed text-zinc-100 transition hover:text-zinc-50"
-        title="在 X 上查看原推"
-      >
+      {/* 推文内容（不再整体可点击，方便选中复制；内部链接可独立跳转） */}
+      <div className="tweet-content mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-zinc-100">
         {renderContent(tweet.content)}
-      </a>
+      </div>
 
       {/* 翻译内容 */}
       {hasTranslation && showTranslation && (
@@ -395,9 +389,25 @@ export default function TweetCard({ tweet, onRefresh, onDelete, showRefresh = tr
         ))}
       </div>
 
-      {/* 数据获取时间 */}
-      <div className="mt-2 text-right text-[10px] text-zinc-600">
-        数据更新于 {formatRelativeTime(tweet.fetched_at)}
+      {/* 查看原文按钮 */}
+      <div className="mt-3 flex items-center justify-between">
+        <div className="text-right text-[10px] text-zinc-600">
+          数据更新于 {formatRelativeTime(tweet.fetched_at)}
+        </div>
+        <a
+          href={tweet.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-300 ring-1 ring-inset ring-sky-500/30 transition hover:bg-sky-500/20 hover:text-sky-200"
+          title="在 X 上查看原推"
+        >
+          查看原文
+          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+        </a>
       </div>
     </article>
   );
