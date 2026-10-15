@@ -138,8 +138,8 @@ export default function NewEventPage() {
             }`}
           >
             <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                autoRefresh ? "translate-x-5" : "translate-x-0.5"
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200 ${
+                autoRefresh ? "left-[22px]" : "left-0.5"
               }`}
             />
           </button>
