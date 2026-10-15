@@ -1,8 +1,11 @@
 import postgres from "postgres";
 
-// 从环境变量获取数据库连接字符串
-// Vercel 连接 Supabase 时会自动注入 POSTGRES_URL
-const DATABASE_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+// 优先使用非池化连接（端口 5432，适合 serverless 短连接），
+// 回退到池化连接（端口 6543）
+const DATABASE_URL =
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
   console.warn(
@@ -14,16 +17,37 @@ if (!DATABASE_URL) {
 // - ssl: "require" 确保加密连接（Supabase 要求）
 // - max: 1 serverless 环境下只保留一个连接
 // - prepare: false 兼容 Supabase 的 PgBouncer（不支持 prepared statements）
-// - connect_timeout: 连接超时 10 秒
+// - connect_timeout: 连接超时 30 秒（避免冷启动时短暂超时）
+// - idle_timeout: 空闲连接 10 秒后关闭，避免占用连接池
+// - max_lifetime: 连接最大存活时间，避免长时间连接出问题
 const sql = postgres(DATABASE_URL || "postgresql://localhost:5432/placeholder", {
   ssl: "require",
   max: 1,
   prepare: false,
-  connect_timeout: 10,
+  connect_timeout: 30,
+  idle_timeout: 10,
+  max_lifetime: 60 * 30, // 30 分钟
 });
 
-// Schema 初始化（只在每次冷启动时执行一次）
-const initSchemaPromise = (async () => {
+// 重试工具：用于冷启动时连接数据库失败的情况
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 1500): Promise<T> {
+  let lastErr: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      console.warn(`[db] 连接重试 ${i + 1}/${maxRetries}: ${err instanceof Error ? err.message : err}`);
+      if (i < maxRetries - 1) {
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+// Schema 初始化（只在每次冷启动时执行一次，带重试）
+const initSchemaPromise = withRetry(async () => {
   try {
     await sql`
       CREATE TABLE IF NOT EXISTS events (
@@ -96,7 +120,7 @@ const initSchemaPromise = (async () => {
     console.error("[db] Schema 初始化失败:", err);
     throw err;
   }
-})();
+});
 
 /**
  * 获取数据库客户端（确保 schema 已初始化）
