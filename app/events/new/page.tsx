@@ -128,7 +128,7 @@ export default function NewEventPage() {
         <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
           <div>
             <div className="text-sm font-medium text-zinc-200">自动抓取更新</div>
-            <div className="text-xs text-zinc-500">开启后，系统每 2 分钟自动搜索并添加相关推文</div>
+            <div className="text-xs text-zinc-500">开启后，打开页面时每 2.5 分钟自动搜索并添加相关推文</div>
           </div>
           <button
             type="button"

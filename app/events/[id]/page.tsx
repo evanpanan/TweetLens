@@ -50,14 +50,24 @@ export default function EventDetailPage() {
     fetchEvent();
   }, [fetchEvent]);
 
-  // 客户端自动轮询：如果开启了自动更新，每 2.5 分钟自动刷新页面数据
+  // 客户端自动轮询：如果开启了自动更新，每 2.5 分钟主动搜索新推文并刷新
   useEffect(() => {
     if (!event?.auto_refresh) return;
-    const interval = setInterval(() => {
-      fetchEvent();
-    }, 2.5 * 60 * 1000);
+
+    const poll = async () => {
+      try {
+        // 主动搜索新推文
+        await fetch(`/api/events/${eventId}/search`, { method: "POST" });
+        // 刷新页面数据
+        await fetchEvent();
+      } catch {
+        // 轮询失败不影响页面
+      }
+    };
+
+    const interval = setInterval(poll, 2.5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [event?.auto_refresh, fetchEvent]);
+  }, [event?.auto_refresh, eventId, fetchEvent]);
 
   // 切换自动更新开关
   const handleToggleAutoRefresh = async () => {
