@@ -9,6 +9,7 @@ interface EventCardProps {
     title: string;
     description: string;
     cover_url: string | null;
+    auto_refresh?: boolean;
     created_at: string;
     tweet_count: number;
   };
@@ -42,6 +43,12 @@ export default function EventCard({ event }: EventCardProps) {
           <p className="mt-2 line-clamp-2 text-sm text-zinc-400">{event.description}</p>
         )}
         <div className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+          {event.auto_refresh && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              自动更新
+            </span>
+          )}
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />

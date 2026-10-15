@@ -11,6 +11,8 @@ interface EventDetail {
   title: string;
   description: string;
   cover_url: string | null;
+  keywords: string;
+  auto_refresh: boolean;
   created_at: string;
   tweet_count: number;
 }
@@ -27,6 +29,7 @@ export default function EventDetailPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [refreshingAll, setRefreshingAll] = useState(false);
+  const [togglingAutoRefresh, setTogglingAutoRefresh] = useState(false);
   const [error, setError] = useState("");
 
   const fetchEvent = useCallback(async () => {
@@ -46,6 +49,34 @@ export default function EventDetailPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  // 客户端自动轮询：如果开启了自动更新，每 2.5 分钟自动刷新页面数据
+  useEffect(() => {
+    if (!event?.auto_refresh) return;
+    const interval = setInterval(() => {
+      fetchEvent();
+    }, 2.5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [event?.auto_refresh, fetchEvent]);
+
+  // 切换自动更新开关
+  const handleToggleAutoRefresh = async () => {
+    if (!event || togglingAutoRefresh) return;
+    setTogglingAutoRefresh(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_refresh: !event.auto_refresh }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEvent(data.event);
+      }
+    } finally {
+      setTogglingAutoRefresh(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,17 +240,40 @@ export default function EventDetailPage() {
 
       <div className="mb-6">
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-black">{event.title}</h1>
-          <button
-            onClick={handleDeleteEvent}
-            className="shrink-0 rounded-full p-2 text-zinc-500 transition hover:bg-red-900/30 hover:text-red-400"
-            title="删除事件"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-          </button>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black">{event.title}</h1>
+            {event.keywords && (
+              <div className="mt-1 text-xs text-zinc-500">
+                搜索关键词：<span className="text-zinc-400">{event.keywords}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {/* 自动更新开关 */}
+            <button
+              onClick={handleToggleAutoRefresh}
+              disabled={togglingAutoRefresh}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition ${
+                event.auto_refresh
+                  ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/30"
+                  : "bg-zinc-800 text-zinc-400 ring-1 ring-inset ring-zinc-700"
+              } disabled:opacity-50`}
+              title={event.auto_refresh ? "已开启自动更新，点击关闭" : "点击开启自动更新"}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${event.auto_refresh ? "bg-emerald-400 animate-pulse" : "bg-zinc-500"}`} />
+              {event.auto_refresh ? "自动更新中" : "自动更新"}
+            </button>
+            <button
+              onClick={handleDeleteEvent}
+              className="rounded-full p-2 text-zinc-500 transition hover:bg-red-900/30 hover:text-red-400"
+              title="删除事件"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </button>
+          </div>
         </div>
         {event.description && (
           <p className="mt-2 text-sm text-zinc-400">{event.description}</p>

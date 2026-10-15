@@ -8,6 +8,8 @@ export default function NewEventPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
+  const [keywords, setKeywords] = useState("");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,6 +31,8 @@ export default function NewEventPage() {
           title: title.trim(),
           description: description.trim(),
           cover_url: coverUrl.trim(),
+          keywords: keywords.trim(),
+          auto_refresh: autoRefresh,
         }),
       });
 
@@ -102,6 +106,43 @@ export default function NewEventPage() {
               <img src={coverUrl} alt="封面预览" className="max-h-40 w-full object-cover" />
             </div>
           )}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-300">
+            搜索关键词
+            <span className="ml-2 text-xs font-normal text-zinc-500">
+              用于自动抓取相关推文，留空则使用事件标题
+            </span>
+          </label>
+          <input
+            type="text"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            placeholder="例如：某公司 财报 2024"
+            maxLength={500}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-600 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+          <div>
+            <div className="text-sm font-medium text-zinc-200">自动抓取更新</div>
+            <div className="text-xs text-zinc-500">开启后，系统每 2 分钟自动搜索并添加相关推文</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+              autoRefresh ? "bg-sky-500" : "bg-zinc-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                autoRefresh ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </div>
 
         {error && (
