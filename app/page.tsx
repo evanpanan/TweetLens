@@ -34,12 +34,21 @@ export default async function HomePage() {
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </div>
-        <h2 className="text-lg font-bold text-amber-300">数据库未配置</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-amber-200/80">
+        <h2 className="text-lg font-bold text-amber-300">数据库连接失败</h2>
+        <p className="mx-auto mt-2 max-w-lg text-sm text-amber-200/80">
           请在 Vercel 项目中创建 Postgres 数据库并连接到本项目。
           进入 Vercel Dashboard → 你的项目 → Storage → Create Database → Postgres，
           创建后自动注入 <code className="rounded bg-amber-500/20 px-1.5 py-0.5 text-xs">POSTGRES_URL</code> 环境变量，然后重新部署即可。
         </p>
+        {/* 显示实际错误信息，方便排查 */}
+        <details className="mx-auto mt-4 max-w-lg text-left">
+          <summary className="cursor-pointer text-xs text-amber-300/70 hover:text-amber-300">
+            查看详细错误信息
+          </summary>
+          <pre className="mt-2 overflow-x-auto rounded-lg bg-black/40 p-3 text-xs text-amber-200/70">
+            {dbError}
+          </pre>
+        </details>
       </div>
     );
   }
