@@ -1,15 +1,19 @@
 import postgres from "postgres";
 
-// 优先使用非池化连接（端口 5432，适合 serverless 短连接），
-// 回退到池化连接（端口 6543）
+// 兼容多种数据库集成注入的环境变量名：
+// - POSTGRES_URL / POSTGRES_URL_NON_POOLING：Vercel Postgres / Supabase 集成
+// - DATABASE_URL / DATABASE_URL_UNPOOLED：Neon 集成
+// - POSTGRES_PRISMA_URL：带连接池的 Prisma 兼容串
 const DATABASE_URL =
-  process.env.POSTGRES_URL_NON_POOLING ||
   process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL;
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  process.env.POSTGRES_PRISMA_URL;
 
 if (!DATABASE_URL) {
   console.warn(
-    "[db] 未检测到 POSTGRES_URL 环境变量。请在 Vercel 项目中创建 Postgres 数据库并连接到本项目。"
+    "[db] 未检测到数据库连接串。请在 Vercel 项目的 Storage 中创建 Postgres 数据库并连接到本项目。"
   );
 }
 
