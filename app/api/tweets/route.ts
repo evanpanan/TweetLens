@@ -53,7 +53,7 @@ async function processTweet(
       (event_id, tweet_id, url, author_name, author_handle, author_avatar,
        author_verified, content, content_zh, posted_at, likes, retweets, replies,
        quotes, bookmarks, views, media, quoted_tweet, is_reply,
-       tags, sentiment, sentiment_reason, submitted_by)
+       tags, sentiment, sentiment_reason, submitted_by, source)
     VALUES
       (${eventId}, ${data.tweet_id}, ${data.url}, ${data.author_name},
        ${data.author_handle}, ${data.author_avatar},
@@ -64,7 +64,7 @@ async function processTweet(
        ${data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null},
        ${data.is_reply ? 1 : 0},
        ${JSON.stringify(analysis.tags)}, ${analysis.sentiment},
-       ${analysis.sentiment_reason}, ${submittedBy || null})
+       ${analysis.sentiment_reason}, ${submittedBy || null}, 'user')
     RETURNING *
   `;
 

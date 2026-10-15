@@ -51,7 +51,7 @@ export async function POST(
             (event_id, tweet_id, url, author_name, author_handle, author_avatar,
              author_verified, content, content_zh, posted_at, likes, retweets, replies,
              quotes, bookmarks, views, media, quoted_tweet, is_reply,
-             tags, sentiment, sentiment_reason)
+             tags, sentiment, sentiment_reason, source)
           VALUES
             (${event.id}, ${data.tweet_id}, ${data.url}, ${data.author_name},
              ${data.author_handle}, ${data.author_avatar},
@@ -62,7 +62,7 @@ export async function POST(
              ${data.quoted_tweet ? JSON.stringify(data.quoted_tweet) : null},
              ${data.is_reply ? 1 : 0},
              ${JSON.stringify(analysis.tags)}, ${analysis.sentiment},
-             ${analysis.sentiment_reason})
+             ${analysis.sentiment_reason}, 'auto')
         `;
         newCount++;
       } catch (e: any) {

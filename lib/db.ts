@@ -64,6 +64,7 @@ const initSchemaPromise = (async () => {
         sentiment_reason TEXT NOT NULL DEFAULT '',
         fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         submitted_by TEXT,
+        source TEXT NOT NULL DEFAULT 'user',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE(event_id, tweet_id)
       )
@@ -85,6 +86,11 @@ const initSchemaPromise = (async () => {
     } catch {}
     try {
       await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS auto_refresh BOOLEAN NOT NULL DEFAULT false`;
+    } catch {}
+
+    // 迁移：为 tweets 表添加 source 列（区分用户提交和自动抓取）
+    try {
+      await sql`ALTER TABLE tweets ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user'`;
     } catch {}
   } catch (err) {
     console.error("[db] Schema 初始化失败:", err);

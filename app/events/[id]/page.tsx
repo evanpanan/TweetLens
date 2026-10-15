@@ -30,6 +30,7 @@ export default function EventDetailPage() {
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [togglingAutoRefresh, setTogglingAutoRefresh] = useState(false);
+  const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "bearish" | "neutral">("all");
   const [error, setError] = useState("");
 
   const fetchEvent = useCallback(async () => {
@@ -194,19 +195,32 @@ export default function EventDetailPage() {
     }
   };
 
+  // 按情感筛选
+  const filteredTweets = sentimentFilter === "all"
+    ? tweets
+    : tweets.filter((t) => t.sentiment === sentimentFilter);
+
   // 按月份分组
   const groupedTweets: { [key: string]: Tweet[] } = {};
   let bullishCount = 0;
   let bearishCount = 0;
   let neutralCount = 0;
+  let userCount = 0;
+  let autoCount = 0;
   for (const t of tweets) {
+    const date = new Date(t.posted_at);
+    const key = date.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
+    if (t.sentiment === "bullish") bullishCount++;
+    else if (t.sentiment === "bearish") bearishCount++;
+    else neutralCount++;
+    if (t.source === "auto") autoCount++;
+    else userCount++;
+  }
+  for (const t of filteredTweets) {
     const date = new Date(t.posted_at);
     const key = date.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
     if (!groupedTweets[key]) groupedTweets[key] = [];
     groupedTweets[key].push(t);
-    if (t.sentiment === "bullish") bullishCount++;
-    else if (t.sentiment === "bearish") bearishCount++;
-    else neutralCount++;
   }
 
   if (loading) {
@@ -347,6 +361,24 @@ export default function EventDetailPage() {
                 </span>
               </div>
             </div>
+
+            {/* 来源统计 */}
+            <div className="mt-2.5 flex items-center gap-3 border-t border-zinc-800 pt-2.5 text-[11px]">
+              <span className="inline-flex items-center gap-1 text-sky-400">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                用户提交 {userCount}
+              </span>
+              <span className="inline-flex items-center gap-1 text-violet-400">
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                自动抓取 {autoCount}
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -391,6 +423,44 @@ export default function EventDetailPage() {
           )}
         </form>
       </div>
+
+      {/* 情感筛选 */}
+      {tweets.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-zinc-500">筛选：</span>
+          {([
+            { key: "all", label: "全部", count: tweets.length, color: "zinc" },
+            { key: "bullish", label: "利好", count: bullishCount, color: "emerald" },
+            { key: "neutral", label: "中性", count: neutralCount, color: "zinc" },
+            { key: "bearish", label: "利空", count: bearishCount, color: "red" },
+          ] as const).map((f) => {
+            const active = sentimentFilter === f.key;
+            const colorMap = {
+              emerald: active ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/40" : "text-zinc-400 hover:text-emerald-300 ring-zinc-700",
+              red: active ? "bg-red-500/15 text-red-300 ring-red-500/40" : "text-zinc-400 hover:text-red-300 ring-zinc-700",
+              zinc: active ? "bg-zinc-700 text-zinc-100 ring-zinc-500" : "text-zinc-400 hover:text-zinc-200 ring-zinc-700",
+            };
+            return (
+              <button
+                key={f.key}
+                onClick={() => setSentimentFilter(f.key)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition ${colorMap[f.color]}`}
+              >
+                {f.label}
+                <span className="text-[10px] opacity-70">{f.count}</span>
+              </button>
+            );
+          })}
+          {sentimentFilter !== "all" && (
+            <button
+              onClick={() => setSentimentFilter("all")}
+              className="ml-1 text-xs text-zinc-600 hover:text-zinc-400"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 时间线 */}
       <div className="relative">

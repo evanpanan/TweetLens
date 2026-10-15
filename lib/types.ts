@@ -37,6 +37,7 @@ export interface Tweet {
   sentiment_reason: string;
   fetched_at: string;
   submitted_by: string | null;
+  source: "user" | "auto";
 }
 
 export interface TweetMedia {
