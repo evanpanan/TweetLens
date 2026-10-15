@@ -1,7 +1,7 @@
-import { neon } from "@neondatabase/serverless";
+import postgres from "postgres";
 
 // 从环境变量获取数据库连接字符串
-// Vercel Postgres / Neon 会自动注入 POSTGRES_URL
+// Vercel 连接 Supabase 时会自动注入 POSTGRES_URL
 const DATABASE_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
@@ -10,10 +10,16 @@ if (!DATABASE_URL) {
   );
 }
 
-// 创建 sql 客户端（使用 HTTP 连接，兼容 serverless / edge）
-// fullResults: true 让查询返回 { rows, rowCount } 等完整结果
-const sql = neon(DATABASE_URL || "postgresql://localhost:5432/placeholder", {
-  fullResults: true,
+// 创建 sql 客户端
+// - ssl: "require" 确保加密连接（Supabase 要求）
+// - max: 1 serverless 环境下只保留一个连接
+// - prepare: false 兼容 Supabase 的 PgBouncer（不支持 prepared statements）
+// - connect_timeout: 连接超时 10 秒
+const sql = postgres(DATABASE_URL || "postgresql://localhost:5432/placeholder", {
+  ssl: "require",
+  max: 1,
+  prepare: false,
+  connect_timeout: 10,
 });
 
 // Schema 初始化（只在每次冷启动时执行一次）

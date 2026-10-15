@@ -10,13 +10,13 @@ export async function GET(
   const { id } = await params;
   const sql = await getDb();
 
-  const { rows: events } = await sql`SELECT * FROM events WHERE id = ${id}`;
+  const events = await sql`SELECT * FROM events WHERE id = ${id}`;
   const event = events[0];
   if (!event) {
     return NextResponse.json({ error: "事件不存在" }, { status: 404 });
   }
 
-  const { rows: tweets } = await sql`
+  const tweets = await sql`
     SELECT * FROM tweets WHERE event_id = ${id} ORDER BY posted_at ASC
   `;
 
@@ -47,7 +47,7 @@ export async function DELETE(
   const sql = await getDb();
 
   const result = await sql`DELETE FROM events WHERE id = ${id}`;
-  if (result.rowCount === 0) {
+  if (result.count === 0) {
     return NextResponse.json({ error: "事件不存在" }, { status: 404 });
   }
 

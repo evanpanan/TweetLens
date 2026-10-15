@@ -27,13 +27,13 @@ export async function POST(request: Request) {
     const sql = await getDb();
 
     // 检查事件是否存在
-    const { rows: eventRows } = await sql`SELECT id FROM events WHERE id = ${parsed.event_id}`;
+    const eventRows = await sql`SELECT id FROM events WHERE id = ${parsed.event_id}`;
     if (eventRows.length === 0) {
       return NextResponse.json({ error: "事件不存在" }, { status: 404 });
     }
 
     // 检查是否已提交过
-    const { rows: existingRows } = await sql`
+    const existingRows = await sql`
       SELECT id FROM tweets WHERE tweet_id = ${tweetId} AND event_id = ${parsed.event_id}
     `;
     if (existingRows.length > 0) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const analysis = analyzeTweet(data.content);
 
     // 存储到数据库
-    const { rows } = await sql`
+    const rows = await sql`
       INSERT INTO tweets
         (event_id, tweet_id, url, author_name, author_handle, author_avatar,
          author_verified, content, posted_at, likes, retweets, replies,

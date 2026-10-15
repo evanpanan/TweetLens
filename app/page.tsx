@@ -11,14 +11,14 @@ export default async function HomePage() {
 
   try {
     const sql = await getDb();
-    const { rows } = await sql`
+    const rows = await sql`
       SELECT e.*, COUNT(t.id)::int as tweet_count
       FROM events e
       LEFT JOIN tweets t ON t.event_id = e.id
       GROUP BY e.id
       ORDER BY e.created_at DESC
     `;
-    events = rows as Event[];
+    events = rows as unknown as Event[];
   } catch (err) {
     dbError =
       err instanceof Error ? err.message : "数据库连接失败";

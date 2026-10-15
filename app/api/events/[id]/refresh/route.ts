@@ -11,12 +11,12 @@ export async function POST(
   const { id } = await params;
   const sql = await getDb();
 
-  const { rows: eventRows } = await sql`SELECT id FROM events WHERE id = ${id}`;
+  const eventRows = await sql`SELECT id FROM events WHERE id = ${id}`;
   if (eventRows.length === 0) {
     return NextResponse.json({ error: "事件不存在" }, { status: 404 });
   }
 
-  const { rows: tweets } = await sql`
+  const tweets = await sql`
     SELECT id, tweet_id, url FROM tweets WHERE event_id = ${id}
   `;
 

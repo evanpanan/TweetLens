@@ -11,7 +11,7 @@ export async function POST(
   const { id } = await params;
   const sql = await getDb();
 
-  const { rows: tweetRows } = await sql`SELECT * FROM tweets WHERE id = ${id}`;
+  const tweetRows = await sql`SELECT * FROM tweets WHERE id = ${id}`;
   const tweet: any = tweetRows[0];
   if (!tweet) {
     return NextResponse.json({ error: "推文不存在" }, { status: 404 });
@@ -35,7 +35,7 @@ export async function POST(
       WHERE id = ${id}
     `;
 
-    const { rows: updatedRows } = await sql`SELECT * FROM tweets WHERE id = ${id}`;
+    const updatedRows = await sql`SELECT * FROM tweets WHERE id = ${id}`;
     const updated: any = updatedRows[0];
 
     return NextResponse.json({
@@ -64,7 +64,7 @@ export async function DELETE(
   const sql = await getDb();
 
   const result = await sql`DELETE FROM tweets WHERE id = ${id}`;
-  if (result.rowCount === 0) {
+  if (result.count === 0) {
     return NextResponse.json({ error: "推文不存在" }, { status: 404 });
   }
 

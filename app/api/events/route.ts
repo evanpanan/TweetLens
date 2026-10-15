@@ -5,7 +5,7 @@ import { z } from "zod";
 // 获取所有事件（含推文数量）
 export async function GET() {
   const sql = await getDb();
-  const { rows: events } = await sql`
+  const events = await sql`
     SELECT e.*, COUNT(t.id)::int as tweet_count
     FROM events e
     LEFT JOIN tweets t ON t.event_id = e.id
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const parsed = createSchema.parse(body);
 
     const sql = await getDb();
-    const { rows } = await sql`
+    const rows = await sql`
       INSERT INTO events (title, description, cover_url)
       VALUES (${parsed.title}, ${parsed.description}, ${parsed.cover_url || null})
       RETURNING *
