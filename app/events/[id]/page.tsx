@@ -28,6 +28,7 @@ export default function EventDetailPage() {
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "bearish" | "neutral">("all");
+  const [sortBy, setSortBy] = useState<"time" | "heat">("time");
   const [error, setError] = useState("");
 
   const fetchEvent = useCallback(async () => {
@@ -159,7 +160,18 @@ export default function EventDetailPage() {
     ? tweets
     : tweets.filter((t) => t.sentiment === sentimentFilter);
 
-  // 按月份分组
+  // 热度分：互动量加权（转发/引用权重更高）
+  const heatScore = (t: Tweet) =>
+    (t.likes || 0) + (t.retweets || 0) * 3 + (t.quotes || 0) * 2 + (t.replies || 0) + (t.bookmarks || 0);
+
+  // 排序：时间（最新在前）/ 热度（互动量从高到低）
+  const sortedTweets = [...filteredTweets].sort((a, b) =>
+    sortBy === "heat"
+      ? heatScore(b) - heatScore(a)
+      : new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime()
+  );
+
+  // 统计 + 按月份分组（按时间排序时展示月份分隔）
   const groupedTweets: { [key: string]: Tweet[] } = {};
   let bullishCount = 0;
   let bearishCount = 0;
@@ -167,15 +179,13 @@ export default function EventDetailPage() {
   let userCount = 0;
   let autoCount = 0;
   for (const t of tweets) {
-    const date = new Date(t.posted_at);
-    const key = date.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
     if (t.sentiment === "bullish") bullishCount++;
     else if (t.sentiment === "bearish") bearishCount++;
     else neutralCount++;
     if (t.source === "auto") autoCount++;
     else userCount++;
   }
-  for (const t of filteredTweets) {
+  for (const t of sortedTweets) {
     const date = new Date(t.posted_at);
     const key = date.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
     if (!groupedTweets[key]) groupedTweets[key] = [];
@@ -399,42 +409,99 @@ export default function EventDetailPage() {
               清除筛选
             </button>
           )}
+
+          {/* 排序方式 */}
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-xs text-zinc-500">排序：</span>
+            {([
+              { key: "time", label: "时间" },
+              { key: "heat", label: "热度" },
+            ] as const).map((s) => {
+              const active = sortBy === s.key;
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => setSortBy(s.key)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition ${
+                    active
+                      ? "bg-sky-500/15 text-sky-300 ring-sky-500/40"
+                      : "text-zinc-400 hover:text-sky-300 ring-zinc-700"
+                  }`}
+                  title={s.key === "time" ? "按发布时间排序（最新在前）" : "按互动热度排序"}
+                >
+                  {s.key === "time" ? (
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  ) : (
+                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                    </svg>
+                  )}
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* 时间线 */}
-      <div className="relative">
-        {/* 时间线竖线 */}
-        <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gradient-to-b from-sky-500/50 via-zinc-800 to-transparent" />
+      {sortBy === "time" ? (
+        <div className="relative">
+          {/* 时间线竖线 */}
+          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gradient-to-b from-sky-500/50 via-zinc-800 to-transparent" />
 
-        {Object.entries(groupedTweets).map(([month, monthTweets]) => (
-          <div key={month} className="mb-8">
-            <div className="sticky top-14 z-10 mb-4 ml-8">
-              <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-[#0a0a0b] px-3 py-1 text-xs font-semibold text-zinc-400">
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                {month}
-                <span className="text-zinc-600">· {monthTweets.length} 条</span>
+          {Object.entries(groupedTweets).map(([month, monthTweets]) => (
+            <div key={month} className="mb-8">
+              <div className="sticky top-14 z-10 mb-4 ml-8">
+                <span className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-[#0a0a0b] px-3 py-1 text-xs font-semibold text-zinc-400">
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  {month}
+                  <span className="text-zinc-600">· {monthTweets.length} 条</span>
+                </span>
+              </div>
+
+              <div className="ml-8 space-y-4">
+                {monthTweets.map((tweet) => (
+                <TweetCard
+                  key={tweet.id}
+                  tweet={tweet}
+                  onRefresh={handleRefresh}
+                  onDelete={handleDelete}
+                />
+              ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {sortedTweets.map((tweet, i) => (
+            <div key={tweet.id} className="relative pl-8">
+              <span
+                className={`absolute left-0 top-4 flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-bold ${
+                  i === 0
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+                    : i < 3
+                      ? "border-sky-500/30 bg-sky-500/10 text-sky-400"
+                      : "border-zinc-800 bg-[#0a0a0b] text-zinc-500"
+                }`}
+                title={`热度排名第 ${i + 1}`}
+              >
+                {i + 1}
               </span>
+              <TweetCard tweet={tweet} onRefresh={handleRefresh} onDelete={handleDelete} />
             </div>
-
-            <div className="ml-8 space-y-4">
-              {monthTweets.map((tweet) => (
-              <TweetCard
-                key={tweet.id}
-                tweet={tweet}
-                onRefresh={handleRefresh}
-                onDelete={handleDelete}
-              />
-            ))}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {tweets.length === 0 && (
         <div className="ml-8 rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-10 text-center">
