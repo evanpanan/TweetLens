@@ -29,6 +29,7 @@ export default function EventDetailPage() {
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [sentimentFilter, setSentimentFilter] = useState<"all" | "bullish" | "bearish" | "neutral">("all");
   const [sortBy, setSortBy] = useState<"time" | "heat">("time");
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [error, setError] = useState("");
 
   const fetchEvent = useCallback(async () => {
@@ -48,6 +49,14 @@ export default function EventDetailPage() {
   useEffect(() => {
     fetchEvent();
   }, [fetchEvent]);
+
+  // 滚动超过一定距离后显示「回到顶部」按钮
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 500);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -513,6 +522,20 @@ export default function EventDetailPage() {
           <p className="text-sm text-zinc-400">还没有推文</p>
           <p className="mt-1 text-xs text-zinc-600">在上方粘贴推文链接，开始构建时间线</p>
         </div>
+      )}
+
+      {/* 回到顶部 */}
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900/90 text-zinc-300 shadow-lg backdrop-blur transition hover:border-sky-500/50 hover:bg-zinc-800 hover:text-sky-400"
+          title="回到顶部"
+          aria-label="回到顶部"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m18 15-6-6-6 6" />
+          </svg>
+        </button>
       )}
     </div>
   );
